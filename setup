@@ -33,7 +33,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 YAML_TARGET=$(mktemp "${SCRIPT_DIR}/function_processed_XXXXXX.yaml")
 trap 'rm -f "$YAML_TARGET"' EXIT
 
-YAML_SOURCE="${SCRIPT_DIR}/function.yaml"
+YAML_SOURCE="${SCRIPT_DIR}/valv/sam/nuclio/function.yaml"
 
 # Process YAML with safe substitution
 if command -v envsubst >/dev/null 2>&1; then
