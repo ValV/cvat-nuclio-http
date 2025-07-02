@@ -1,0 +1,57 @@
+# This source is a modification of CVAT SAM 'function.yaml'
+#
+# Copyright (C) 2023 CVAT.ai Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# See https://github.com/ValV/cvat-nuclio-http
+
+metadata:
+  name: pth-facebookresearch-sam-vit-h  # must be left as is
+  namespace: cvat
+  annotations:
+    name: Segment Anything X
+    version: 2
+    type: interactor
+    spec:
+    framework: pytorch  # FIXME: not actually
+    min_pos_points: 1
+    min_neg_points: 0
+    animated_gif: https://raw.githubusercontent.com/opencv/cvat/develop/site/content/en/images/hrnet_example.gif
+    help_message: The interactor allows to get a mask of an object using at least one positive, and any negative points inside it
+
+spec:
+  description: Interactive object segmentation with remote Segment-Anything
+  runtime: 'python:3.8'
+  handler: main:handler
+  serviceType: NodePort
+  eventTimeout: 30s
+  env:
+    - name: PYTHONPATH
+      value: /opt/nuclio/sam
+    - name: SAM_URI
+      value: ${SAM_URI}
+
+  build:
+    image: valv.sam.x
+    baseImage: python:3.8.16-slim-buster
+
+    directives:
+      preCopy:
+      # Set workdir
+        - kind: WORKDIR
+          value: /opt/nuclio/sam
+  triggers:
+    myHttpTrigger:
+      maxWorkers: 2
+      kind: 'http'
+      workerAvailabilityTimeoutMilliseconds: 10000
+      attributes:
+        maxRequestBodySize: 33554432 # 32MB image
+
+  platform:
+    attributes:
+      restartPolicy:
+        name: always
+        maximumRetryCount: 3
+      mountMode: volume
