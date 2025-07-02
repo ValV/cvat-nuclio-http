@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -e
+
+# Display help if requested
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Deploy Nuclio function with SAM_URI configuration"
+    echo "Usage: $0 [SAM_URI_VALUE]"
+    echo "Environment variable SAM_URI will be used if not provided as argument"
+    exit 0
+fi
+
+# Determine SAM_URI value
+if [ -n "$1" ]; then
+    SAM_URI_VALUE="$1"
+elif [ -n "$SAM_URI" ]; then
+    SAM_URI_VALUE="$SAM_URI"
+else
+    echo "Error: SAM_URI must be set as environment variable or passed as argument" >&2
+    echo "Example: $0 http://localhost:51515/features" >&2
+    exit 1
+fi
+
+# Validate SAM_URI format
+if [[ ! "$SAM_URI_VALUE" =~ ^https?:// ]]; then
+    echo "Error: Invalid SAM_URI format. Must start with http:// or https://" >&2
+    exit 1
+fi
+
+# Get directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Create processed temporary file
+YAML_TARGET=$(mktemp "${SCRIPT_DIR}/function_processed_XXXXXX.yaml")
+trap 'rm -f "$YAML_TARGET"' EXIT
+
+YAML_SOURCE="${SCRIPT_DIR}/function.yaml"
+
+# Process YAML with safe substitution
+if command -v envsubst >/dev/null 2>&1; then
+    # Preferred method with envsubst
+    SAM_URI="$SAM_URI_VALUE" envsubst '${SAM_URI}' < "$YAML_SOURCE" > "$YAML_TARGET"
+else
+    # Fallback method with sed (works without additional dependencies)
+    ESCAPED_URI=$(printf '%s\n' "$SAM_URI_VALUE" | sed -e 's/[\/&]/\\&/g')
+    sed -e "s/\${SAM_URI}/$ESCAPED_URI/g" "$YAML_SOURCE" > "$YAML_TARGET"
+fi
+
+# Verify substitution
+if ! grep -q "$SAM_URI_VALUE" "$YAML_TARGET"; then
+    echo "Error: SAM_URI substitution failed" >&2
+    exit 1
+else
+    mv -v $YAML_TARGET $YAML_SOURCE && \
+    echo "Setting up successful."
+fi
