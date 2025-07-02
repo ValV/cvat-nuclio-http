@@ -4,6 +4,56 @@ set -e
 NUCTL_VERSION="1.12.0"  # latest stable version as of 2025-07-01
 INSTALL_DIR="/usr/local/bin"
 
+# Install Docker Buildx system-wide
+install_buildx() {
+    # Check if buildx is already installed and working
+    if docker buildx version &>/dev/null; then
+        echo "Docker buildx is already installed: $(docker buildx version)"
+        return 0
+    fi
+
+    echo "Installing Docker buildx system-wide..."
+    BUILDX_VERSION="v0.11.2"
+    SYSTEM_PLUGIN_DIR="/usr/libexec/docker/cli-plugins"
+
+    # Create plugin directory if needed
+    sudo mkdir -p "$SYSTEM_PLUGIN_DIR"
+
+    # Detect architecture
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64)  ARCH="amd64" ;;
+        aarch64) ARCH="arm64" ;;
+        armv7l)  ARCH="arm-v7" ;;
+        *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
+    esac
+
+    # Download appropriate binary
+    BUILDX_URL="https://github.com/docker/buildx/releases/download/$BUILDX_VERSION/buildx-$BUILDX_VERSION.linux-$ARCH"
+    echo "Downloading buildx from $BUILDX_URL"
+
+    # Download to temporary location
+    TEMP_FILE=$(mktemp)
+    curl -fsSL -o "$TEMP_FILE" "$BUILDX_URL"
+    sudo mv "$TEMP_FILE" "$SYSTEM_PLUGIN_DIR/docker-buildx"
+    sudo chmod +x "$SYSTEM_PLUGIN_DIR/docker-buildx"
+
+    # Verify installation
+    if docker buildx version &>/dev/null; then
+        echo "Docker buildx installed successfully"
+    else
+        # Add fallback to PATH
+        echo "Adding buildx to system PATH as fallback"
+        sudo ln -s "$SYSTEM_PLUGIN_DIR/docker-buildx" /usr/local/bin/docker-buildx
+    fi
+
+    # Initialize buildx
+    echo "Setting up buildx builder"
+    docker buildx create --use --name=nuclio-builder
+    docker buildx inspect --bootstrap
+}
+
+
 # Check if nuctl is already installed
 check_nuctl() {
     if command -v nuctl &> /dev/null; then
@@ -58,6 +108,11 @@ install_nuctl() {
         exit 1
     fi
 }
+
+# Check and install buildx
+if ! docker buildx version >/dev/null 2>&1; then
+    install_buildx
+fi
 
 # Main execution
 if ! check_nuctl; then
