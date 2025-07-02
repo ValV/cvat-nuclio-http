@@ -6,7 +6,6 @@
 #
 # See https://github.com/ValV/cvat-nuclio-http
 
-# import base64
 import json
 
 from os import getenv
@@ -18,9 +17,6 @@ SAM_URI = "http://host.docker.internal:51515/features"
 
 def init_context(context):
     context.logger.info("Init context...  0%")
-    # model = ModelHandler()
-    # context.user_data.model = model
-    # context.logger.info("Init context... 50%")
     context.user_data.sam_uri = getenv("SAM_URI", SAM_URI)
     context.logger.debug("URL = %s", context.user_data.sam_uri)
     context.logger.info("Init context...100%")
@@ -29,10 +25,6 @@ def init_context(context):
 def handler(context, event):
     context.logger.info("Call handler")
     data = event.body
-    # buf = io.BytesIO(base64.b64decode(data["image"]))
-    # image = Image.open(buf)
-    # image = image.convert("RGB")  #  to make sure image comes in RGB
-    # features = context.user_data.model.handle(image)
 
     url = context.user_data.sam_uri
     context.logger.debug("URL = %s", url)
@@ -47,15 +39,11 @@ def handler(context, event):
                 len(data_response),
                 str(type(data_response)),
             )
-            # context.logger.info("Response headers: %s", response.info())
             result = data_response.decode("utf-8")  # string
 
             # Return the response back to the original caller
             return context.Response(
                 body=result,
-                # body = json.dumps({
-                #     'blob': base64.b64encode((features.cpu().numpy() if features.is_cuda else features.numpy())).decode(),
-                # }),
                 headers={},  # TODO: forward headers
                 content_type="application/json",
                 status_code=200,
