@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -e
+
+NUCTL_VERSION="1.12.0"  # latest stable version as of 2025-07-01
+INSTALL_DIR="/usr/local/bin"
+
+# Check if nuctl is already installed
+check_nuctl() {
+    if command -v nuctl &> /dev/null; then
+        echo "nuctl is already installed: $(which nuctl)"
+        nuctl version
+        return 0
+    fi
+    return 1
+}
+
+# Install nuctl with proper permissions
+install_nuctl() {
+    local os=$(uname -s | tr '[:upper:]' '[:lower:]')
+    local arch=$(uname -m)
+    
+    # Normalize architecture names
+    case "$arch" in
+        x86_64) arch="amd64" ;;
+        arm64) arch="arm64" ;;
+        aarch64) arch="arm64" ;;
+        *) echo "Unsupported architecture: $arch"; exit 1 ;;
+    esac
+
+    # Validate OS
+    case "$os" in
+        linux|darwin) ;;
+        *) echo "Unsupported OS: $os"; exit 1 ;;
+    esac
+
+    echo "Installing nuctl v$NUCTL_VERSION for $os-$arch..."
+    local download_url="https://github.com/nuclio/nuclio/releases/download/$NUCTL_VERSION/nuctl-$NUCTL_VERSION-$os-$arch"
+
+    # Download to temporary location
+    local temp_file=$(mktemp)
+    curl -fsSL -o "$temp_file" "$download_url"
+    chmod +x "$temp_file"
+
+    # Install with appropriate permissions
+    if [ -w "$INSTALL_DIR" ]; then
+        mv "$temp_file" "$INSTALL_DIR/nuctl"
+    else
+        echo "Elevating permissions to install to $INSTALL_DIR"
+        sudo mv "$temp_file" "$INSTALL_DIR/nuctl"
+    fi
+
+    # Verify installation
+    if command -v nuctl &> /dev/null; then
+        echo "Successfully installed: $(which nuctl)"
+        nuctl version
+    else
+        echo "Installation failed - nuctl not found in PATH"
+        exit 1
+    fi
+}
+
+# Main execution
+if ! check_nuctl; then
+    install_nuctl
+fi
+
+# Verify nuctl functionality
+echo "Testing nuctl command..."
+nuctl get functions
+
+echo "Nuclio installation verified successfully"
