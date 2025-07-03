@@ -13,6 +13,24 @@ install_buildx() {
     fi
 
     echo "Installing Docker buildx system-wide..."
+
+    # Try APT installation first (Debian/Ubuntu)
+    if command -v apt &>/dev/null; then
+        echo "Detected Debian/Ubuntu. Installing via APT..."
+        sudo apt update
+        # Install Docker CE if missing
+        if ! command -v docker &>/dev/null; then
+            echo "Installing Docker CE..."
+            sudo apt install -y docker-ce docker-ce-cli containerd.io
+        fi
+        # Install buildx plugin
+        sudo apt install -y docker-buildx-plugin
+        return 0
+    fi
+
+    # Fallback: Manual installation (non-Debian systems)
+    echo "APT unavailable. Installing manually..."
+
     BUILDX_VERSION="v0.11.2"
     SYSTEM_PLUGIN_DIR="/usr/libexec/docker/cli-plugins"
 
