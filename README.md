@@ -15,17 +15,17 @@ This repository provides a Nuclio function that integrates CVAT with a **remote
 
 ## Prerequisites
 
-1. **CVAT Installation**: Installed and running (follow [CVAT docs](https://docs.cvat.ai/docs))
+1. **CVAT Installation**: installed and running (follow [CVAT docs](https://docs.cvat.ai/docs))
     
-2. **Nuclio CLI**: Required for deployment (included in `install` script)
+2. **Nuclio CLI**: required for deployment (included in `install` script)
     
-3. **Remote SAM Server**: Running and accessible (e.g., [segment-anything-flask](https://github.com/ValV/sam-service))
+3. **Remote SAM Server**: running and accessible (e.g., [segment-anything-flask](https://github.com/ValV/sam-service))
     
 
 ## Directory Structure
 
 ```
-valv-sam-nuclio/
+cvat-nuclio-http/
 ├── valv/
 │   └── sam/
 │       └── nuclio/
